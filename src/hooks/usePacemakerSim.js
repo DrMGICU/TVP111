@@ -1,12 +1,15 @@
+/**
+ * Author: Dr. Mohammed Al Ghazal
+ * Description: Transvenous Pacing Simulator
+ * Date: [13/01/2025]
+ * 
+ * This file is part of a custom-built simulation for cardiac pacing,
+ * designed and developed to illustrate the functionality of both
+ * pacemaker-generated and intrinsic cardiac rhythms.
+ */
+
 import { useState, useRef, useEffect } from 'react';
 
-/**
- * Transvenous pacing logic:
- * - Pacer fires if intrinsicRate < pacemakerRate in onDemand mode.
- * - Pacer does not fire if intrinsicRate >= pacemakerRate in onDemand mode.
- * - Handles 'asynchronous' and 'onDemand' pacing modes.
- * - Includes sensing logic based on intrinsicAmplitude.
- */
 export default function usePacemakerSim({
   pacemakerRate = 80,
   outputMA = 2,
@@ -15,12 +18,11 @@ export default function usePacemakerSim({
   mode = 'onDemand',
 }) {
   const [events, setEvents] = useState([]);
-
   const lastIntrinsicRef = useRef(performance.now());
   const lastPacerRef = useRef(performance.now());
   const requestRef = useRef(null);
 
-  const PACING_THRESHOLD = 2; // Need >= 2 mA for a visible spike/capture
+  const PACING_THRESHOLD = 2; // mA threshold for pacer to function
 
   function spawnEvent(type, time) {
     setEvents((prev) => [...prev, { time, type }]);
@@ -30,40 +32,20 @@ export default function usePacemakerSim({
     function update() {
       const now = performance.now();
 
-      // 1) Handle intrinsic beats
+      // Generate intrinsic events in on-demand mode
       const intrinsicInterval = 60000 / intrinsicRate;
-      if (mode !== 'asynchronous') {
-        if (now - lastIntrinsicRef.current >= intrinsicInterval) {
-          spawnEvent('native', now);
-          lastIntrinsicRef.current = now;
-        }
+      if (mode === 'onDemand' && now - lastIntrinsicRef.current >= intrinsicInterval) {
+        spawnEvent('native', now);
+        lastIntrinsicRef.current = now;
       }
 
-      // 2) Handle pacer behavior
-      switch (mode) {
-        case 'asynchronous': {
-          // Always fire at the pacemakerRate
-          if (timeToPace(now, lastPacerRef.current, pacemakerRate)) {
-            firePacer(now, outputMA);
-          }
-          break;
-        }
-
-        case 'onDemand':
-        default: {
-          const intrinsicIntervalMet = now - lastIntrinsicRef.current < intrinsicInterval;
-
-          if (intrinsicRate >= pacemakerRate && intrinsicIntervalMet) {
-            // Intrinsic rate is adequate, do not fire pacer
-            break;
-          }
-
-          // Intrinsic rate is inadequate or interval not met, fire pacer
-          if (timeToPace(now, lastPacerRef.current, pacemakerRate)) {
-            firePacer(now, outputMA);
-          }
-          break;
-        }
+      // Generate pacemaker events
+      const pacemakerInterval = 60000 / pacemakerRate;
+      if (
+        (mode === 'asynchronous' || (mode === 'onDemand' && intrinsicRate < pacemakerRate)) &&
+        now - lastPacerRef.current >= pacemakerInterval
+      ) {
+        firePacer(now, outputMA);
       }
 
       requestRef.current = requestAnimationFrame(update);
@@ -73,18 +55,12 @@ export default function usePacemakerSim({
     return () => cancelAnimationFrame(requestRef.current);
   }, [pacemakerRate, outputMA, intrinsicRate, intrinsicAmplitude, mode]);
 
-  function timeToPace(now, lastTime, rate) {
-    const interval = 60000 / rate;
-    return now - lastTime >= interval;
-  }
-
   function firePacer(now, output) {
-    if (output < PACING_THRESHOLD) {
-      return; // No spike or paced event if below threshold
-    }
-    spawnEvent('spike', now); // Fire spike
+    if (output < PACING_THRESHOLD) return; // Skip if below threshold
+    spawnEvent('spike', now);
+    spawnEvent('paced', now);
     lastPacerRef.current = now;
-    spawnEvent('paced', now); // Fire paced event
+    console.log('Paced event generated at:', now);
   }
 
   return events;

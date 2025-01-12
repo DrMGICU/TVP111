@@ -1,17 +1,24 @@
-// src/App.js
+/**
+ * Author: Dr. Mohammed Al Ghazal
+ * Description: Transvenous Pacing Simulator
+ * Date: [13/01/2025]
+ * 
+ * This file is part of a custom-built simulation for cardiac pacing,
+ * designed and developed to illustrate the functionality of both
+ * pacemaker-generated and intrinsic cardiac rhythms.
+ */
 import React, { useState } from 'react';
+import PacerControls from './components/PacerControls/PacerControls';
 import usePacemakerSim from './hooks/usePacemakerSim';
 import ECGCanvas from './components/ECGCanvas';
 
 function App() {
-  // State variables for pacemaker and intrinsic controls
   const [pacemakerRate, setPacemakerRate] = useState(80);
   const [outputMA, setOutputMA] = useState(2);
   const [intrinsicRate, setIntrinsicRate] = useState(60);
-  const [intrinsicAmplitude, setIntrinsicAmplitude] = useState(1.5); // Default under-sensing
+  const [intrinsicAmplitude, setIntrinsicAmplitude] = useState(1.5);
   const [mode, setMode] = useState('onDemand');
 
-  // Get events from the pacemaker simulation logic
   const events = usePacemakerSim({
     pacemakerRate,
     outputMA,
@@ -19,80 +26,29 @@ function App() {
     intrinsicAmplitude,
     mode,
   });
+  console.log('Events being passed to ECGCanvas:', events);
 
   return (
-    <div style={{ fontFamily: 'Arial', margin: '1rem' }}>
+    <div style={{ fontFamily: 'Arial, sans-serif', padding: '2rem', textAlign: 'center' }}>
       <h1>Transvenous Pacing Simulator</h1>
-
-      <Controls
-        pacemakerRate={pacemakerRate}
-        setPacemakerRate={setPacemakerRate}
+      <PacerControls
+        rate={pacemakerRate}
+        setRate={setPacemakerRate}
         outputMA={outputMA}
         setOutputMA={setOutputMA}
-        intrinsicRate={intrinsicRate}
-        setIntrinsicRate={setIntrinsicRate}
-        intrinsicAmplitude={intrinsicAmplitude}
-        setIntrinsicAmplitude={setIntrinsicAmplitude}
-        mode={mode}
-        setMode={setMode}
+        sensitivity={intrinsicAmplitude}
+        setSensitivity={setIntrinsicAmplitude}
       />
-
-      {/* Pass sensitivity to ECGCanvas */}
-      <ECGCanvas events={events} intrinsicAmplitude={intrinsicAmplitude} />
-    </div>
-  );
-}
-
-function Controls({
-  pacemakerRate,
-  setPacemakerRate,
-  outputMA,
-  setOutputMA,
-  intrinsicRate,
-  setIntrinsicRate,
-  intrinsicAmplitude,
-  setIntrinsicAmplitude,
-  mode,
-  setMode,
-}) {
-  return (
-    <div style={{ border: '1px solid #ccc', padding: '1rem' }}>
-      <h2>Pacer Controls</h2>
-
-      <div>
-        <label>Mode: </label>
+      <div style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+        <label style={{ marginRight: '1rem' }}>Mode: </label>
         <select value={mode} onChange={(e) => setMode(e.target.value)}>
-          <option value="onDemand">On-Demand</option>
-          <option value="asynchronous">Asynchronous</option>
+          <option value="onDemand">On-Demand (VVI)</option>
+          <option value="asynchronous">Asynchronous (VVO)</option>
         </select>
       </div>
-
-      <div>
-        <label>Pacer Rate (bpm): </label>
-        <input
-          type="number"
-          value={pacemakerRate}
-          onChange={(e) => setPacemakerRate(Number(e.target.value))}
-          min={30}
-          max={200}
-        />
-      </div>
-
-      <div>
-        <label>Output (mA): </label>
-        <input
-          type="number"
-          value={outputMA}
-          onChange={(e) => setOutputMA(Number(e.target.value))}
-          min={0}
-          max={25}
-          step={0.5}
-        />
-        <small>(&#62;=2 => spike visible, &#60;2 => no spike)</small>
-      </div>
-
-      <div>
-        <label>Intrinsic Rate (bpm): </label>
+      <div style={{ marginBottom: '2rem' }}>
+        <h3>Intrinsic Controls</h3>
+        <label style={{ marginRight: '1rem' }}>Intrinsic Rate (bpm): </label>
         <input
           type="number"
           value={intrinsicRate}
@@ -101,22 +57,13 @@ function Controls({
           max={200}
         />
       </div>
-
-      <div>
-        <label>Intrinsic Amplitude (mV): </label>
-        <input
-          type="number"
-          value={intrinsicAmplitude}
-          onChange={(e) => setIntrinsicAmplitude(Number(e.target.value))}
-          min={0}
-          max={10}
-          step={0.5}
-        />
-        <small> 
-          &lt; 2 => under-sensing (artifacts), 
-          ≥ 6 => over-sensing (no ECG) 
-        </small>
-      </div>
+      <ECGCanvas
+        events={events}
+        intrinsicAmplitude={intrinsicAmplitude}
+        pacemakerRate={pacemakerRate}
+        intrinsicRate={intrinsicRate}
+        mode={mode}
+      />
     </div>
   );
 }

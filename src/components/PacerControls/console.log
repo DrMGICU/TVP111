@@ -1,0 +1,3 @@
+useEffect(() => {
+  console.log('Events Array:', events); // Log the events array
+}, [events]);

@@ -1,7 +1,15 @@
-// src/components/ECGCanvas.js
+/**
+ * Author: Dr. Mohammed Al Ghazal
+ * Description: Transvenous Pacing Simulator
+ * Date: [13/01/2025]
+ * 
+ * This file is part of a custom-built simulation for cardiac pacing,
+ * designed and developed to illustrate the functionality of both
+ * pacemaker-generated and intrinsic cardiac rhythms.
+ */
 import React, { useRef, useEffect } from 'react';
 
-export default function ECGCanvas({ events = [], intrinsicAmplitude }) {
+export default function ECGCanvas({ events = [], intrinsicAmplitude, pacemakerRate, intrinsicRate, mode }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -14,98 +22,113 @@ export default function ECGCanvas({ events = [], intrinsicAmplitude }) {
 
       const midY = canvas.height / 2;
 
-      // Determine behavior based on intrinsicAmplitude
+      // Render artifacts for low sensitivity
       if (intrinsicAmplitude < 2) {
-        // Draw artifacts
-        ctx.fillStyle = 'rgba(200, 50, 50, 0.4)';
-        for (let i = 0; i < canvas.width; i += 10) {
-          const yOffset = Math.sin((i + performance.now() * 0.005) % Math.PI) * 10;
-          ctx.fillRect(i, midY + yOffset, 5, 5);
-        }
-      } else if (intrinsicAmplitude >= 6) {
-        // No ECG visible, just clear the canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        renderArtifacts(ctx, canvas.width, midY);
         animationId = requestAnimationFrame(render);
         return;
-      } else {
-        // Normal ECG rendering logic
-        // baseline
-        ctx.beginPath();
-        ctx.moveTo(0, midY);
-        ctx.lineTo(canvas.width, midY);
-        ctx.strokeStyle = '#888';
-        ctx.stroke();
-
-        const now = performance.now();
-        // Shift events left over time
-        events.forEach((evt) => {
-          const elapsed = now - evt.time;
-          const speed = 0.04; // px/ms
-          const x = canvas.width - elapsed * speed;
-          if (x < 0) return;
-
-          switch (evt.type) {
-            case 'native':
-              drawPQRST(ctx, x, midY, 'green');
-              break;
-            case 'spike':
-              drawSpike(ctx, x, midY, 'orange');
-              break;
-            case 'paced':
-              drawPQRST(ctx, x, midY, 'red');
-              break;
-            default:
-              break;
-          }
-        });
       }
+
+      // Skip rendering if sensitivity is too high
+      if (intrinsicAmplitude >= 6) {
+        animationId = requestAnimationFrame(render);
+        return;
+      }
+
+      // Draw baseline
+      drawBaseline(ctx, canvas.width, midY);
+
+      const now = performance.now();
+
+      // Render events
+      events.forEach((evt) => {
+        const elapsed = now - evt.time;
+        const speed = 0.04; // Speed of wave movement
+        const x = canvas.width - elapsed * speed;
+
+        if (x < 0) return; // Skip events outside the canvas
+
+        if (evt.type === 'spike') {
+          drawSpike(ctx, x, midY, 'black');
+        }
+
+        if (evt.type === 'paced') {
+          if (mode === 'asynchronous' || (mode === 'onDemand' && intrinsicRate < pacemakerRate)) {
+            drawPQRST(ctx, x, midY, 'green', true); // Paced QRS
+          }
+        }
+
+        if (evt.type === 'native' && mode === 'onDemand' && intrinsicRate >= pacemakerRate) {
+          drawPQRST(ctx, x, midY, 'red', false); // Intrinsic QRS
+        }
+      });
 
       animationId = requestAnimationFrame(render);
     }
 
     animationId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationId);
-  }, [events, intrinsicAmplitude]);
+  }, [events, intrinsicAmplitude, pacemakerRate, intrinsicRate, mode]);
 
   return (
     <canvas
       ref={canvasRef}
-      width={600}
-      height={200}
+      width={1000}
+      height={500}
       style={{ border: '1px solid #ccc' }}
     />
   );
 }
 
-function drawPQRST(ctx, baseX, baseline, color) {
-  const pqrst = [
-    // P wave
-    [-24, 0],
-    [-22, -2],
-    [-20, 0],
-    // QRS
-    [-16, -1],
-    [-14, 15],
-    [-12, -8],
-    [-10, 0],
-    // T wave
-    [-6, 5],
-    [-4, 2],
-    [-2, 0],
-    [0, 0],
-  ];
+// Helper functions
+function renderArtifacts(ctx, width, midY) {
+  ctx.fillStyle = 'rgba(200, 50, 50, 0.4)';
+  for (let i = 0; i < width; i += 10) {
+    const yOffset = Math.sin((i + performance.now() * 0.005) % Math.PI) * 10;
+    ctx.fillRect(i, midY + yOffset, 5, 5);
+  }
+}
+
+function drawBaseline(ctx, width, midY) {
+  ctx.beginPath();
+  ctx.moveTo(0, midY);
+  ctx.lineTo(width, midY);
+  ctx.strokeStyle = '#888';
+  ctx.stroke();
+}
+
+function drawPQRST(ctx, baseX, baseline, color, isWide = false) {
+  const amplitudeScale = 2;
 
   ctx.beginPath();
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
 
-  const [startX, startY] = pqrst[0];
-  ctx.moveTo(baseX + startX, baseline + startY);
+  // P wave
+  ctx.moveTo(baseX - 40, baseline);
+  ctx.bezierCurveTo(
+    baseX - 36, baseline - 2 * amplitudeScale,
+    baseX - 30, baseline - 2 * amplitudeScale,
+    baseX - 24, baseline
+  );
 
-  for (let i = 1; i < pqrst.length; i++) {
-    const [relX, relY] = pqrst[i];
-    ctx.lineTo(baseX + relX, baseline + relY);
-  }
+  // Q wave
+  ctx.lineTo(baseX - 20, baseline - 1 * amplitudeScale);
+
+  // R wave
+  const rWaveHeight = isWide ? 20 * amplitudeScale : 10 * amplitudeScale;
+  ctx.lineTo(baseX - 16, baseline - rWaveHeight);
+
+  // S wave
+  ctx.lineTo(baseX - 12, baseline + 5 * amplitudeScale);
+
+  // T wave
+  ctx.bezierCurveTo(
+    baseX - 4, baseline + 5 * amplitudeScale,
+    baseX, baseline + 5 * amplitudeScale,
+    baseX + 8, baseline
+  );
+
   ctx.stroke();
 }
 

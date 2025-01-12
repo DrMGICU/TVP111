@@ -1,0 +1,24 @@
+.container {
+  background-color: #222;
+  color: #fff;
+  padding: 1rem;
+  border-radius: 12px;
+  max-width: 400px;
+  margin: auto;
+}
+
+.controlGroup {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.readout {
+  margin-top: 0.5rem;
+  background-color: #333;
+  color: #0f0;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  font-family: "Courier New", monospace;
+  font-size: 1rem;
+  display: inline-block;
+}
