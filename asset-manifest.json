@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/TVP111/static/css/main.f41168bf.css",
+    "main.js": "/TVP111/static/js/main.35e6b9c6.js",
+    "index.html": "/TVP111/index.html",
+    "main.f41168bf.css.map": "/TVP111/static/css/main.f41168bf.css.map",
+    "main.35e6b9c6.js.map": "/TVP111/static/js/main.35e6b9c6.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f41168bf.css",
+    "static/js/main.35e6b9c6.js"
+  ]
+}
