@@ -43,7 +43,7 @@ function App() {
         <label style={{ marginRight: '1rem' }}>Mode: </label>
         <select value={mode} onChange={(e) => setMode(e.target.value)}>
           <option value="onDemand">On-Demand (VVI)</option>
-          <option value="asynchronous">Asynchronous (VVO)</option>
+          <option value="asynchronous">Asynchronous (VOO)</option>
         </select>
       </div>
       <div style={{ marginBottom: '2rem' }}>
